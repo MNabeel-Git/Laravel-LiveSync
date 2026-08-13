@@ -21,6 +21,11 @@
             <div
                 class="p-4 border-b border-gray-800 font-semibold bg-gray-900 text-gray-100 flex justify-between items-center">
                 <span>{{ $receiver->name }}</span>
+                {{-- Status Badge --}}
+                <span id="status-badge" class="flex items-center gap-1.5 text-xs font-normal text-green-400">
+                    <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span id="status-text">Online</span>
+                </span>
             </div>
 
             <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-950">

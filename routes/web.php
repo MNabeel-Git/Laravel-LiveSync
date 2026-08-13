@@ -3,13 +3,20 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+
 
 Route::get('/', function () {
     return view('welcome');
 });
 
+
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    $users = User::where('id', '!=', Auth::id())->get();
+    return view('dashboard', [
+        'users' => $users,
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

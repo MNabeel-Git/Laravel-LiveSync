@@ -2,11 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatContainer = document.getElementById('chat-container');
     if (!chatContainer) return;
 
-    
     const authUserId = parseInt(chatContainer.dataset.authUserId);
-    const authUserName = chatContainer.dataset.authUserName; 
+    const authUserName = chatContainer.dataset.authUserName;
     const receiverId = parseInt(chatContainer.dataset.receiverId);
-    const receiverName = chatContainer.dataset.receiverName; 
     const csrfToken = chatContainer.dataset.csrfToken;
 
     const ids = [authUserId, receiverId].sort((a, b) => a - b);
@@ -17,7 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('message-input');
     const typingIndicator = document.getElementById('typing-indicator');
 
+    // UI Status Elements
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
     let typingTimeout = null;
+
+    function setOnlineStatus(isOnline) {
+        if (isOnline) {
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse';
+            statusText.textContent = 'Online';
+            statusText.className = 'text-xs text-green-400 font-normal';
+        } else {
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+            statusText.textContent = 'Offline';
+            statusText.className = 'text-xs text-gray-400 font-normal';
+        }
+    }
 
     function appendMessage(body, time, isMine) {
         const wrapper = document.createElement('div');
@@ -32,16 +46,32 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    const channel = window.Echo.private(channelName);
+    const channel = window.Echo.join(channelName);
 
+    // 2. Presence Events
+    channel
+        .here((users) => {
+            const isReceiverHere = users.some(u => u.id === receiverId);
+            setOnlineStatus(isReceiverHere);
+        })
+        .joining((user) => {
+            if (user.id === receiverId) {
+                setOnlineStatus(true);
+            }
+        })
+        .leaving((user) => {
+            if (user.id === receiverId) {
+                setOnlineStatus(false);
+            }
+        });
+
+    // 3. Keep existing Broadcast & Whisper Listeners
     channel.listen('.message.sent', (e) => {
         appendMessage(e.body, e.created_at, e.sender_id === authUserId);
         typingIndicator.classList.add('opacity-0');
     });
 
-   
     channel.listenForWhisper('typing', (e) => {
-     
         typingIndicator.textContent = `${e.name} is typing...`;
         typingIndicator.classList.remove('opacity-0');
 
@@ -50,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             typingIndicator.classList.add('opacity-0');
         }, 2000);
     });
-
 
     input.addEventListener('input', () => {
         channel.whisper('typing', {
