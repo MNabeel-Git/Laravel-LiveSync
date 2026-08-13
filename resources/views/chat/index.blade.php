@@ -1,5 +1,8 @@
 <x-app-layout>
-    <div
+    {{-- Chat Container with Data Attributes --}}
+    <div id="chat-container" data-auth-user-id="{{ auth()->id() }}" data-auth-user-name="{{ auth()->user()->name }}"
+        data-receiver-id="{{ $receiver->id }}" data-receiver-name="{{ $receiver->name }}"
+        data-csrf-token="{{ csrf_token() }}"
         class="flex h-[80vh] max-w-5xl mx-auto mt-6 border border-gray-700 rounded-lg overflow-hidden shadow-lg bg-gray-900">
 
         {{-- Sidebar --}}
@@ -15,8 +18,9 @@
 
         {{-- Chat window --}}
         <div class="flex-1 flex flex-col">
-            <div class="p-4 border-b border-gray-800 font-semibold bg-gray-900 text-gray-100">
-                {{ $receiver->name }}
+            <div
+                class="p-4 border-b border-gray-800 font-semibold bg-gray-900 text-gray-100 flex justify-between items-center">
+                <span>{{ $receiver->name }}</span>
             </div>
 
             <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-950">
@@ -33,6 +37,11 @@
                 @endforeach
             </div>
 
+            {{-- Typing Indicator Banner --}}
+            <div id="typing-indicator"
+                class="px-4 py-1 text-xs text-gray-400 italic bg-gray-950 h-6 transition-opacity duration-200 opacity-0">
+            </div>
+
             <form id="chat-form" class="p-3 border-t border-gray-800 bg-gray-900 flex gap-2">
                 @csrf
                 <input id="message-input" type="text" autocomplete="off"
@@ -46,60 +55,5 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const authUserId = {{ auth()->id() }};
-            const receiverId = {{ $receiver->id }};
-
-            const ids = [authUserId, receiverId].sort((a, b) => a - b);
-            const channelName = `chat.${ids[0]}.${ids[1]}`;
-
-            const messagesEl = document.getElementById('messages');
-            const form = document.getElementById('chat-form');
-            const input = document.getElementById('message-input');
-
-            function appendMessage(body, time, isMine) {
-                const wrapper = document.createElement('div');
-                wrapper.className = `flex ${isMine ? 'justify-end' : 'justify-start'}`;
-                wrapper.innerHTML = `
-                    <div class="px-3 py-2 rounded-lg max-w-xs ${isMine ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-100'}">
-                        <p class="text-sm"></p>
-                        <span class="text-[10px] opacity-60 block text-right">${time}</span>
-                    </div>`;
-                wrapper.querySelector('p').textContent = body;
-                messagesEl.appendChild(wrapper);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-            }
-
-            window.Echo.private(channelName)
-                .listen('.message.sent', (e) => {
-                    appendMessage(e.body, e.created_at, e.sender_id === authUserId);
-                });
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const body = input.value.trim();
-                if (!body) return;
-
-                // 1. Optimistically append message to sender's screen
-                appendMessage(body, 'Now', true);
-                input.value = '';
-
-                // 2. Fetch request with X-Socket-ID header attached
-                await fetch(`/chat/${receiverId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                        'X-Socket-ID': window.Echo.socketId() // <--- THIS PREVENTS DUPLICATION
-                    },
-                    body: JSON.stringify({
-                        body
-                    }),
-                });
-            });
-
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        });
-    </script>
+    <script src="{{ asset('assets/script.js') }}"></script>
 </x-app-layout>
