@@ -60,10 +60,9 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 -----------
 
-php artisan reverb:start
+## Command to run this project
 
-npm run dev
-
-php artisan serve
-
-php artisan queue:work
+* php artisan reverb:start --> to start larave reverb
+* npm run build --> once to bundle the .js and .css
+* php artisan serve
+* php artisan queue:work --> to start queue for message broadcasting.
