@@ -8,31 +8,30 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-
 class ChatController extends Controller
 {
-    
     public function index(User $user)
     {
         $me = Auth::user();
 
-        $messages = Message::where('sender_id', $me->id)
-            ->where('receiver_id', $user->id)
+        $allMessages = Message::query()
+            ->where(function ($query) use ($me, $user) {
+                $query->where('sender_id', $me->id)
+                      ->where('receiver_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($me, $user) {
+                $query->where('sender_id', $user->id)
+                      ->where('receiver_id', $me->id);
+            })
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        $messages2 = Message::where('sender_id', $user->id)
-            ->where('receiver_id', $me->id)
-            ->get();
-
-        $allMessages = $messages->merge($messages2)->sortBy('created_at');
-
-        // sidebar user's to chat with except currently loggedin user
         $users = User::where('id', '!=', $me->id)->get(); 
 
         return view('chat.index', [
             'receiver' => $user,
             'messages' => $allMessages,
-            'users' => $users,               
+            'users'    => $users,            
         ]);
     }
 
@@ -42,15 +41,17 @@ class ChatController extends Controller
             'body' => 'required|string',
         ]);
 
-
         $message = Message::create([
-            'sender_id' => Auth::id(),
+            'sender_id'   => Auth::id(),
             'receiver_id' => $user->id,
-            'body' => $request->body,
+            'body'        => $request->body,
         ]);
 
-        broadcast(new MessageSent($message))->toOthers();
+        broadcast(new MessageSent($message));
 
-        return response()->json(['status' => 'sent']);
+        return response()->json([
+            'status'  => 'sent',
+            'message' => $message,
+        ]);
     }
 }

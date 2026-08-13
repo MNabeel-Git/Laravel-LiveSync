@@ -65,9 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-    // 3. Keep existing Broadcast & Whisper Listeners
+
     channel.listen('.message.sent', (e) => {
-        appendMessage(e.body, e.created_at, e.sender_id === authUserId);
+        // If the message is from the other user, append it to the chat
+        if (e.sender_id !== authUserId) {
+            appendMessage(e.body, e.created_at, false);
+        }
         typingIndicator.classList.add('opacity-0');
     });
 
